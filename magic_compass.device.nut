@@ -3,94 +3,95 @@
 
 // L6470 "dSPIN" stepper motor driver IC
 // http://www.st.com/st-web-ui/static/active/en/resource/technical/document/datasheet/CD00255075.pdf
-class L6470 {
+// The following constants are all associated with the L6470 class
+// these are consts outside the class so that we can use them in motor configuration
+// and for performance reasons
+const CONFIG_PWMDIV_1      = 0x0000;
+const CONFIG_PWMDIV_2      = 0x2000;
+const CONFIG_PWMDIV_3      = 0x4000;
+const CONFIG_PWMDIV_4      = 0x5000;
+const CONFIG_PWMDIV_5      = 0x8000;
+const CONFIG_PWMDIV_6      = 0xA000;
+const CONFIG_PWMDIV_7      = 0xC000;
+const CONFIG_PWMMULT_0_625 = 0x0000;
+const CONFIG_PWMMULT_0_750 = 0x0400;
+const CONFIG_PWMMULT_0_875 = 0x0800;
+const CONFIG_PWMMULT_1_000 = 0x0C00;
+const CONFIG_PWMMULT_1_250 = 0x1000;
+const CONFIG_PWMMULT_1_500 = 0x1400;
+const CONFIG_PWMMULT_1_750 = 0x1800;
+const CONFIG_PWMMULT_2_000 = 0x1C00;
+const CONFIG_SR_320        = 0x0000;
+const CONFIG_SR_75         = 0x0100;
+const CONFIG_SR_110        = 0x0200;
+const CONFIG_SR_260        = 0x0300;
+const CONFIG_INT_OSC       = 0x0000;
+const CONFIG_OC_SD         = 0x0080;
+const CONFIG_VSCOMP        = 0x0020;
+const CONFIG_SW_USER       = 0x0010;
+const CONFIG_EXT_CLK       = 0x0008;
 
-  static CONFIG_PWMDIV_1      = 0x0000;
-  static CONFIG_PWMDIV_2      = 0x2000;
-  static CONFIG_PWMDIV_3      = 0x4000;
-  static CONFIG_PWMDIV_4      = 0x5000;
-  static CONFIG_PWMDIV_5      = 0x8000;
-  static CONFIG_PWMDIV_6      = 0xA000;
-  static CONFIG_PWMDIV_7      = 0xC000;
-  static CONFIG_PWMMULT_0_625 = 0x0000;
-  static CONFIG_PWMMULT_0_750 = 0x0400;
-  static CONFIG_PWMMULT_0_875 = 0x0800;
-  static CONFIG_PWMMULT_1_000 = 0x0C00;
-  static CONFIG_PWMMULT_1_250 = 0x1000;
-  static CONFIG_PWMMULT_1_500 = 0x1400;
-  static CONFIG_PWMMULT_1_750 = 0x1800;
-  static CONFIG_PWMMULT_2_000 = 0x1C00;
-  static CONFIG_SR_320        = 0x0000;
-  static CONFIG_SR_75         = 0x0100;
-  static CONFIG_SR_110        = 0x0200;
-  static CONFIG_SR_260        = 0x0300;
-  static CONFIG_INT_OSC       = 0x0000;
-  static CONFIG_OC_SD         = 0x0080;
-  static CONFIG_VSCOMP        = 0x0020;
-  static CONFIG_SW_USER       = 0x0010;
-  static CONFIG_EXT_CLK       = 0x0008;
-  
-  static STEP_MODE_SYNC     = 0x80;
-  static STEP_SEL_FULL      = 0x00;
-  static STEP_SEL_HALF      = 0x01;
-  static STEP_SEL_1_4       = 0x02;
-  static STEP_SEL_1_8       = 0x03;
-  static STEP_SEL_1_16      = 0x04;
-  static STEP_SEL_1_32      = 0x05;
-  static STEP_SEL_1_64      = 0x06;
-  static STEP_SEL_1_128     = 0x06;
-  
-  static CMD_NOP		 	      = 0x00;
-  static CMD_GOHOME		      = 0x70;
-  static CMD_GOMARK		      = 0x78;
-  static CMD_GOTO           = 0x60;
-  static CMD_GOTO_DIR       = 0x68;
-  static CMD_RESET_POS	    = 0xD8;
-  static CMD_RESET		      = 0xC0;
-  static CMD_RUN            = 0x50;
-  static CMD_SOFT_STOP	    = 0xB0;
-  static CMD_HARD_STOP	    = 0xB8;
-  static CMD_SOFT_HIZ		    = 0xA0;
-  static CMD_HARD_HIZ		    = 0xA8;
-  static CMD_GETSTATUS	    = 0xD0;	 
-  static CMD_GETPARAM       = 0x20;
-  static CMD_SETPARAM       = 0x00;
-  
-  static REG_ABS_POS 		    = 0x01;
-  static REG_EL_POS 		    = 0x02;
-  static REG_MARK			      = 0x03;
-  static REG_SPEED		      = 0x04;
-  static REG_ACC			      = 0x05;
-  static REG_DEC			      = 0x06;
-  static REG_MAX_SPD 		    = 0x07;
-  static REG_MIN_SPD 		    = 0x08;
-  static REG_KVAL_HOLD 	    = 0x09;
-  static REG_KVAL_RUN 	    = 0x0A;
-  static REG_KVAL_ACC 	    = 0x0B;
-  static REG_KVAL_DEC 	    = 0x0C;
-  static REG_INT_SPD		    = 0x0D;
-  static REG_ST_SLP		      = 0x0E;
-  static REG_FN_SLP_ACC	    = 0x0F;
-  static REG_FN_SLP_DEC	    = 0x10;
-  static REG_K_THERM		    = 0x11;
-  static REG_ADC_OUT		    = 0x12;
-  static REG_OCD_TH		      = 0x13;
-  static REG_STALL_TH		    = 0x13;
-  static REG_STEP_MODE	    = 0x14;
-  static REG_FS_SPD		      = 0x15;
-  static REG_STEP_MODE 	    = 0x16;
-  static REG_ALARM_EN		    = 0x17;
-  static REG_CONFIG 		    = 0x18;
-  static REG_STATUS 		    = 0x19;
+const STEP_MODE_SYNC        = 0x80;
+const STEP_SEL_FULL         = 0x00;
+const STEP_SEL_HALF         = 0x01;
+const STEP_SEL_1_4          = 0x02;
+const STEP_SEL_1_8          = 0x03;
+const STEP_SEL_1_16         = 0x04;
+const STEP_SEL_1_32         = 0x05;
+const STEP_SEL_1_64         = 0x06;
+const STEP_SEL_1_128        = 0x06;
+
+const CMD_NOP		 	          = 0x00;
+const CMD_GOHOME		        = 0x70;
+const CMD_GOMARK		        = 0x78;
+const CMD_GOTO              = 0x60;
+const CMD_GOTO_DIR          = 0x68;
+const CMD_GOUNTIL           = 0x82;
+const CMD_RESET_POS	        = 0xD8;
+const CMD_RESET		          = 0xC0;
+const CMD_RUN               = 0x50;
+const CMD_SOFT_STOP	        = 0xB0;
+const CMD_HARD_STOP	        = 0xB8;
+const CMD_SOFT_HIZ		      = 0xA0;
+const CMD_HARD_HIZ		      = 0xA8;
+const CMD_GETSTATUS	        = 0xD0;	 
+const CMD_GETPARAM          = 0x20;
+const CMD_SETPARAM          = 0x00;
+
+const REG_ABS_POS 		      = 0x01;
+const REG_EL_POS 		        = 0x02;
+const REG_MARK			        = 0x03;
+const REG_SPEED		          = 0x04;
+const REG_ACC			          = 0x05;
+const REG_DEC			          = 0x06;
+const REG_MAX_SPD 		      = 0x07;
+const REG_MIN_SPD 		      = 0x08;
+const REG_KVAL_HOLD 	      = 0x09;
+const REG_KVAL_RUN 	        = 0x0A;
+const REG_KVAL_ACC 	        = 0x0B;
+const REG_KVAL_DEC 	        = 0x0C;
+const REG_INT_SPD	  	      = 0x0D;
+const REG_ST_SLP		        = 0x0E;
+const REG_FN_SLP_ACC	      = 0x0F;
+const REG_FN_SLP_DEC	      = 0x10;
+const REG_K_THERM		        = 0x11;
+const REG_ADC_OUT		        = 0x12;
+const REG_OCD_TH		        = 0x13;
+const REG_STALL_TH		      = 0x13;
+const REG_STEP_MODE	        = 0x14;
+const REG_FS_SPD		        = 0x15;
+const REG_STEP_MODE 	      = 0x16;
+const REG_ALARM_EN		      = 0x17;
+const REG_CONFIG 		        = 0x18;
+const REG_STATUS 		        = 0x19;
+
+class L6470 {
   
 	_spi 	  = null;
 	_cs_l 	= null;
 	_rst_l 	= null;
 	_flag_l	= null;
 	
-	// full-step speed
-	fs_speed = null;
-
 	constructor(spi, cs_l, rst_l = null, flag_l = null, flag_l_cb = null) {
 		this._spi 	  = spi;
 		this._cs_l 	  = cs_l;
@@ -99,7 +100,7 @@ class L6470 {
 
 		_cs_l.write(1);
 		
-		// hardware reset line is optional; don't attempt to configure if not provided
+		// hardware reset line is optional; don't attempt to write if not provided
 		if (_rst_l) {
 		  _rst_l.write(1);
 		}
@@ -152,6 +153,7 @@ class L6470 {
 	  _rst_l.write(0);
 		imp.sleep(0.001);
 		_rst_l.write(1);
+		imp.sleep(0.001);
 		
 		// device comes out of reset with overcurrent bit set in status register
     // read the register to clear the bit.
@@ -175,6 +177,14 @@ class L6470 {
 	function getStatus() {
 		_write(format("%c", CMD_GETSTATUS));
 		return _read(2);
+	}
+	
+	// read the state of the BUSY bit in the L6470 status register
+	// Input: None
+	// Return: 1 if busy, 0 otherwise.
+	function isBusy() {
+	  if (getStatus() & 0x0002) { return 0; }
+	  return 1;
 	}
 	
 	// write the L6470 config register
@@ -204,10 +214,32 @@ class L6470 {
 	
 	// read the current microstepping mode
 	// Input: None
-	// Return: 1-byte step mode register value (integer)
+	// Return: step divisor (1, 2, 4, 8, 16, 32, 64, or 128), or 0 for Sync mode. Returns -1 on error.
 	function getStepMode() {
 	  _write(format("%c", CMD_GETPARAM | REG_STEP_MODE));
-		return _read(1);
+	  local mode = _read(1);
+	  switch (mode) {
+	    case STEP_MODE_SYNC:
+	      return 0;
+	    case STEP_SEL_FULL:
+	      return 1;
+	    case STEP_SEL_HALF:
+	      return 2;
+	    case STEP_SEL_1_4:
+	      return 4;
+	    case STEP_SEL_1_8:
+	      return 8;
+	    case STEP_SEL_1_16:
+	      return 16;
+	    case STEP_SEL_1_32:
+	      return 32;
+	    case STEP_SEL_1_64:
+	      return 64;
+	    case STEP_SEL_1_128:
+	      return 128;
+	    default:
+	      return -1;
+	  }
 	}
 	
 	// set the minimum motor speed in steps per second
@@ -216,8 +248,9 @@ class L6470 {
 	// Input: new min speed in steps per second (integer)
 	// Return: None
 	function setMinSpeed(stepsPerSec) {
-	  local val = math.ceil(stepsPerSec * 0.065536).tointeger();
-	  if (val > 0x03FF) { val = 0x03FF; }
+	  // min speed (steps/s) = (MIN_SPEED * 2^-24 / tick (250 ns))
+	  local val = math.ceil(stepsPerSec * 4.194304).tointeger();
+	  if (val > 0x1FFF) { val = 0x1FFF; }
 	  _write(format("%c", CMD_SETPARAM | REG_MIN_SPD));
 	  _write(format("%c%c", ((val & 0xff00) >> 8), (val & 0xff)));
 	}
@@ -228,8 +261,8 @@ class L6470 {
 	// Return: Min speed in steps per second (integer)
 	function getMinSpeed() {
 	  _write(format("%c", CMD_GETPARAM | REG_MIN_SPD));
-		local minspeed = _read(2);
-		minspeed = math.ceil((1.0 * minspeed) / 0.065536);
+		local minspeed = _read(2) & 0x1FFF;
+		minspeed = math.ceil((1.0 * minspeed) / 4.194304);
 		return minspeed;
 	}
 	
@@ -238,6 +271,7 @@ class L6470 {
 	// Input: new max speed in steps per second (integer)
 	// Return: None
 	function setMaxSpeed(stepsPerSec) {
+	  // max speed (steps/s) = (MAX_SPEED * 2^-28 / tick (250ns))
 	  local val = math.ceil(stepsPerSec * 0.065536).tointeger();
 	  if (val > 0x03FF) { val = 0x03FF; }
 	  _write(format("%c", CMD_SETPARAM | REG_MAX_SPD));
@@ -249,7 +283,7 @@ class L6470 {
 	// Return: Max speed in steps per second (integer)
 	function getMaxSpeed() {
 	  _write(format("%c", CMD_GETPARAM | REG_MAX_SPD));
-		local maxspeed = _read(2);
+		local maxspeed = _read(2) & 0x03FF;
 		maxspeed = math.ceil((1.0 * maxspeed) / 0.065536);
 		return maxspeed;
 	}
@@ -258,9 +292,9 @@ class L6470 {
 	// Input: new full-step speed in steps per second (integer)
 	// Return: None
 	function setFSSpeed(stepsPerSec) {
+	  // fs_speed (steps/s) = ((FS_SPD + 0.5) * 2^-18) / tick (250ns))
 	  local val = math.ceil((stepsPerSec * 0.065536) - 0.5).tointeger();
 	  if (val > 0x03FF) { val = 0x03FF; }
-	  fs_speed = val;
 	  _write(format("%c", CMD_SETPARAM | REG_FS_SPD));
 	  _write(format("%c%c", ((val & 0xff00) >> 8), (val & 0xff)));
 	}
@@ -270,8 +304,8 @@ class L6470 {
 	// Return: full-step speed in steps per second (integer)
 	function getFSSpeed() {
 	  _write(format("%c", CMD_GETPARAM | REG_FS_SPD));
-		local fsspeed = _read(2);
-		fsspeed = math.ceil((1.0 * fsspeed) / 0.065536);
+		local fsspeed = _read(2) & 0x03FF;
+		fsspeed = math.ceil(((1.0 * fsspeed) / 0.065536) + 7.629395);
 		return fsspeed;
 	}
 	
@@ -296,68 +330,114 @@ class L6470 {
 	  _write(format("%c", (val & 0xff)));
 	}
 	
-	// Set Vs compensation factor for hold state
-	// Input: new 1-byte compensation factor (integer)
+	// Set Supply Voltage Multiplier for hold state
+	// Controller will apply a sinusoidal voltage of magnitude up to Vsupply * KVal
+	// to the motor. 
+	// Input: new Vsupply multiplier (0 to 1, float)
 	// Return: None
 	function setHoldKval(val) {
+	  if (val > 256) { val = 256; }
+	  if (val < 0) { val = 0; }
+	  local kval_int = val * 256.0;
 	  _write(format("%c", CMD_SETPARAM | REG_KVAL_HOLD));
-	  _write(format("%c", (val & 0xff)));
+	  _write(format("%c", (kval_int.tointeger() & 0xff)));
 	}
 	
-	// Get Vs compensation factor for hold state
+	// Get Supply Voltage Multiplier for hold state
 	// Input: None
-	// Return: 1-byte value (integer)
+	// Return: current hold-state supply voltage multiplier (0 to 1, float)
 	function getHoldKval() {
 	  _write(format("%c", CMD_GETPARAM | REG_KVAL_HOLD));
-	  return _read(1);
+	  return _read(1) / 256.0;
 	}
 	
-	// Set Vs compensation factor for run state
-	// Input: new 1-byte compensation factor (integer)
+	// Set Supply Voltage Multiplier for run state
+	// Input: new Vsupply multiplier (0 to 1, float)
 	// Return: None
 	function setRunKval(val) {
+	  if (val > 256) { val = 256; }
+	  if (val < 0) { val = 0; }
+	  local kval_int = val * 256.0;
 	  _write(format("%c", CMD_SETPARAM | REG_KVAL_RUN));
-	  _write(format("%c", (val & 0xff)));
+	  _write(format("%c", (kval_int.tointeger() & 0xff)));
 	}
 	
-	// Get Vs compensation factor for run state
+	// Get Supply Voltage Multiplier for run state
 	// Input: None
-	// Return: 1-byte value (integer)	
+	// Return: current run-state supply voltage multiplier (0 to 1, float)
 	function getRunKval() {
 	  _write(format("%c", CMD_GETPARAM | REG_KVAL_RUN));
-	  return _read(1);
+	  return _read(1) / 256.0;
 	}
 	
-	// Set Vs compensation factor for acceleration state
-	// Input: new 1-byte compensation factor (integer)
+	// Set Supply Voltage Multiplier for acceleration state
+	// Input: new Vsupply multiplier (0 to 1, float)
 	// Return: None	
 	function setAccKval(val) {
+	  if (val > 256) { val = 256; }
+	  if (val < 0) { val = 0; }
+	  local kval_int = val * 256.0;
 	  _write(format("%c", CMD_SETPARAM | REG_KVAL_ACC));
-	  _write(format("%c", (val & 0xff)));
+	  _write(format("%c", (kval_int.tointeger() & 0xff)));
 	}
 	
-	// Get Vs compensation factor for acceleration state
+	// Get Supply Voltage Multiplier for acceleration state
 	// Input: None
-	// Return: 1-byte value (integer)
+	// Return: current accel-state supply voltage multiplier (0 to 1, float)
 	function getAccKval() {
 	  _write(format("%c", CMD_GETPARAM | REG_KVAL_ACC));
-	  return _read(1);
+	  return _read(1) / 256.0;
 	}	
 
-	// Set Vs compensation factor for deceleration state
-	// Input: new 1-byte compensation factor (integer)
+	// Set Supply Voltage Multiplier for deceleration state
+	// Input: new Vsupply multiplier (0 to 1, float)
 	// Return: None	
 	function setDecKval(val) {
+	  if (val > 256) { val = 256; }
+	  if (val < 0) { val = 0; }
+	  local kval_int = val * 256.0;
 	  _write(format("%c", CMD_SETPARAM | REG_KVAL_DEC));
-	  _write(format("%c", (val & 0xff)));
+	  _write(format("%c", (kval_int.tointeger() & 0xff)));
 	}
 	
-	// Get Vs compensation factor for deceleration state
+	// Get Supply Voltage Multiplier for deceleration state
 	// Input: None
-	// Return: 1-byte value (integer)
+	// Return: current accel-state supply voltage multiplier (0 to 1, float)
 	function getDecKval() {
 	  _write(format("%c", CMD_GETPARAM | REG_KVAL_DEC));
-	  return _read(1);
+	  return _read(1) / 256.0;
+	}
+	
+	// Enable or Disable Low-speed position optimization. 
+	// This feature reduces phase current crossover distortion and improves position tracking at low speed
+	// See datasheet section 7.3
+	// When enabled, min speed is forced to zero.
+	// Input: bool 
+	// Return: None
+	function setLspdPosOpt(en) {
+	  if (en) {
+	    en = 1;
+	  } else {
+	    en = 0;
+	  }
+	  local mask = en << 12;
+	  server.log(format("0x%02X", mask));
+	  // get the MIN_SPEED reg contents and mask the LSPD_OPT bit in
+	  _write(format("%c", CMD_GETPARAM | REG_MIN_SPD));
+	  local data = ((_read(2) & 0x1fff) & ~mask) | mask;
+	  server.log(format("0x%X", data));
+    _write(format("%c%c%c", CMD_SETPARAM | REG_MIN_SPD, (data & 0x1f00 >> 8), data & 0xff));
+	}
+	
+	// Determine whether low-speed position optimization is enabled. 
+	// Input: None
+	// Return: 1 if enabled, 0 otherwise
+	function getLspdPosOpt() {
+	  _write(format("%c", CMD_GETPARAM | REG_MIN_SPD));
+	  local mask = 1 << 12;
+	  local data = _read(2);
+	  server.log(format("0x%X", data));
+	  return (data & 0x1fff) & mask;
 	}
 	
 	// Set current motor absolute position counter
@@ -468,11 +548,12 @@ class L6470 {
 	}
 	
 	// Move the motor to a position
-	// Position is a 22-bit value. Units match the current step mode.
+	// Position is in steps and may be floating-point. 
+	// Class will convert this to a 22-bit value in the same units as the current stepping value.
 	// Direction is 1 for forward, 0 for reverse
 	// If a direction not provided, the motor will take the shortest path
 	// Input: Position (integer), [direction (integer)]
-    // Return: None
+  // Return: None
 	function goTo(pos, dir = null) {
 	  local cmd = CMD_GOTO;
 	  if (dir != null) {
@@ -482,23 +563,63 @@ class L6470 {
 	      cmd = CMD_GOTO_DIR | 0x01;
 	    }
 	  }
-    _write(format("%c%c%c%c", cmd, (pos & 0xff0000) >> 16, (pos & 0xff00) >> 8, pos & 0xff));
+	  local step_mode = getStepMode();
+	  if (step_mode < 1) { step_mode = 1; }
+	  local pos_counts = (pos * step_mode).tointeger();
+	  // get the current step 
+    _write(format("%c%c%c%c", cmd, (pos_counts & 0x3f0000) >> 16, (pos_counts & 0xff00) >> 8, pos_counts & 0xff));
+	}
+	
+	// Move the motor until the controller's switch line is pulled low
+	// This automates setting the home position with a limit switch or hall sensor!
+	// If the SW_MODE bit in the config reg is '0', the motor will hard-stop. 
+	// If SW_MODE is '1', the motor will decelerate. 
+	// When the motor is stopped, 
+	// Input: 
+	//  fwd (bool) - if true, run forward to the switch.
+  //  speed (steps per second, integer) - defaults to max speed.
+	//  set_mark_reg (bool) - if true, ABS_POS will be preserved and copied to the MARK register. Otherwise, ABS_POS will be zeroed.
+	// Return: None
+	function goUntil(fwd = 1, speed = null, set_mark_reg = 0) {
+	  //server.log("running at speed = "+speed);
+	  local cmd = CMD_GOUNTIL;
+	  if (set_mark_reg) { cmd = cmd | 0x04; }
+	  if (fwd) { cmd = cmd | 0x01; }
+	  
+	  // default to max speed (15650 steps/s)
+	  local spd = 0x0fffff;
+	  if (speed != null) {
+	    // speed (steps/s) = SPEED * 2^-28/tick (250ns). Speed field is 20 bits.
+	    spd = math.ceil(67.108864 * speed).tointeger();
+	  }
+	  
+	  local spd_byte2 = (spd >> 16) & 0x0f;
+	  local spd_byte1 = (spd >> 8) & 0xff;
+	  local spd_byte0 = spd & 0xff;
+	  //server.log(format("0x %02X %02X %02X %02X", cmd, spd_byte2, spd_byte1, spd_byte0));
+	  _write(format("%c%c%c%c", cmd, spd_byte2, spd_byte1, spd_byte0));
 	}
 	
 	// Run the motor
 	// Direction is 1 for fwd, 0 for reverse
 	// Speed is in steps per second. Angular speed will depend on the steps per rotation of your motor
-	// Input: [direction (integer)], [speed (integer)]
+	// Input: [direction (integer)], [speed (steps/s)]
 	// Return: None
-	function run(fwd = 1, speed = 0) {
+	function run(fwd = 1, speed = null) {
 	  local cmd = CMD_RUN;
 	  if (fwd) { cmd = CMD_RUN | 0x01; }
-	  if (!speed) { speed = fs_speed; }
-	  else { 
-	    speed = math.ceil((speed * 0.065536) - 0.5).tointeger();
-	    if (speed > 0x03FF) { speed = 0x03FF; }
+	  
+	  // default to max speed (15650 steps/s)
+	  local spd = 0x0fffff;
+	  if (speed != null) {
+	    // speed (steps/s) = SPEED * 2^-28/tick (250ns). Speed field is 20 bits.
+	    spd = math.ceil(67.108864 * speed).tointeger();
 	  }
-    _write(format("%c%c%c", cmd, (speed & 0xff00) >> 8, speed & 0xff));
+	  
+	  local spd_byte2 = (spd >> 16) & 0x0f;
+	  local spd_byte1 = (spd >> 8) & 0xff;
+	  local spd_byte0 = spd & 0xff;
+    _write(format("%c%c%c", cmd, spd_byte2, spd_byte1, spd_byte0));
 	}
 	
 	// Soft-stop the motor. This will decelerate the motor smoothly to zero speed.
@@ -574,6 +695,7 @@ class MT333X {
     static PGCMD_NOANTENNA                          = "$PGCMD,33,0*6D"; 
     
     static DEFAULT_BAUD  = 9600;
+    static _VERBOSE = false;
 
     // pins and hardware
     _uart   = null;
@@ -656,8 +778,10 @@ class MT333X {
                     _parse(packets[i]);
                     _uart_buffer = _uart_buffer.slice(len + 1,_uart_buffer.len());
                 } catch (err) {
-                   _uart_buffer = "";
-                   server.log(err+", Pkt: "+packets[i]);
+                  _uart_buffer = "";
+                  if (_VERBOSE) {
+                    server.log("[GPS] "+err+", Pkt: "+packets[i]);
+                  }
                 }
             }
         }
@@ -741,7 +865,9 @@ class MT333X {
                 server.log("ACK: "+packetstr);
                 break;
             default:
-                server.log("Unrecognized Header: "+packetstr);
+                if (_VERBOSE) {
+                  server.log("[GPS] Unrecognized Header: "+packetstr);
+                }
         }
     }   
     
@@ -1056,19 +1182,27 @@ dest <- {
 // 2017-10-07 13:03:13 -07:00	[Device]	cannot convert the string (line 671), Pkt: GLGSA,A,1,,,,,,,,,,,,,,,*02
 // 2017-10-07 13:03:13 -07:00	[Device]	the index '0' does not exist (line 633), Pkt: GNRMC,200313.000,V,,,,,1.40,355.73,071017,,,N*52)
 
+imp.enableblinkup(true);
+
 i2c <- hardware.i2c89;
 i2c.configure(CLOCK_SPEED_400_KHZ);
 
 uart <- hardware.uart6E;
 uart.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
+// Todo: figure out how to up the baud rate on this thing
 
 spi <- hardware.spi257;
 spi.configure(CLOCK_IDLE_LOW | MSB_FIRST, 234);
 cs_l <- hardware.pinA;
+cs_l.configure(DIGITAL_OUT);
+cs_l.write(1);
+motor_stby <- hardware.pinD;
+motor_stby.configure(DIGITAL_OUT);
+motor_stby.write(0);
 
 imu <- LSM9DS0(i2c);
 gps <- MT333X(uart);
-motor <- L6470(spi, cs_l);
+motor <- L6470(spi, cs_l, motor_stby);
 
 // Enable the Magnetometer by setting the ODR to a non-zero value
 imu.setDatarate_M(1); // 1 Hz - nearest supported rate is 3.125 Hz 
@@ -1078,19 +1212,36 @@ gps.setUpdateRate(1);
 gps.setReportingRate(1);
 
 // 1/64 step microstepping
-// TODO: parse step divisor to keep consts inside class
-motor.setStepMode(0x06); // sync disabled, pwm divisor 1, pwm multiplier 2
-// set max speed to 10 revs per second
-motor.setMaxSpeed(10 * STEPS_PER_REV); // steps per sec
-motor.setFSSpeed(STEPS_PER_REV); // steps per sec
+motor.setStepMode(STEP_SEL_1_64);
+motor.setMaxSpeed(10 * STEPS_PER_REV); 
+server.log(format("Max speed set to %d steps/s", motor.getMaxSpeed()));
+motor.setFSSpeed(10 * STEPS_PER_REV);
+server.log(format("Full-stepping speed set to %d steps/s", motor.getFSSpeed()));
 motor.setAcc(0x0fff); // max
-motor.setOcTh(500); // 500 mA
-//motor.setConfig(CONFIG_INT_OSC | CONFIG_PWMMULT_2_000);
-motor.setConfig(0x1C00);
-motor.setRunKval(0xff); // set Vs divisor to 1
+motor.setOcTh(500); // mA
+motor.setConfig(CONFIG_INT_OSC | CONFIG_PWMMULT_2_000);
 
-// server.log(format("Status Register: 0x%04x", motor.getStatus()));
-// server.log(format("Config Register: 0x%04x", motor.getConfig()));
+// limit applied voltage while running to 1V
+// 1 / 9 = 0.11
+motor.setRunKval(0.11); 
+
+// motor is rated for ~6V, but driving it hard during accel browns out our crappy power supply
+// seems to start and run just fine at 1V
+// 6 / 9 = 0.67
+// this should prevent us from stalling.
+motor.setAccKval(0.11);
+motor.setDecKval(0.11);
+
+// limit the applied voltage in hold state to 0.5V. (0.5 / 9 = 0.05) 
+// if we don't even need this, we should keep turning it down. It just wastes power.
+motor.setHoldKval(0.05);
+
+// enable low-speed position optimization
+//motor.setLspdPosOpt(1);
+//server.log("Motor LSPD_OPT Bit: "+motor.getLspdPosOpt());
+
+server.log(format("Status Register: 0x%04x", motor.getStatus()));
+server.log(format("Config Register: 0x%04x", motor.getConfig()));
 
 // Helpers ---------------------------------------------------------------------
 
@@ -1142,25 +1293,24 @@ function getBearingTo(pos, fix) {
 }
 
 function datapoint() {
+  
   // Now read everything
   server.log(format("Hdg: %0.2fº Mag", getHdg() + DECLINATION));
   local pos = gps.getPosition();
-  if ("time" in pos) {
-    server.log(format("Bearing to (%0.6f, %0.6f): %0.2fº True", dest.lat, dest.lon, getBearingTo(pos, dest)));
+  local bearing = 180;
+  if ("lat" in pos && "lon" in pos) {
+    bearing = getBearingTo(pos, dest);
+    server.log(format("Bearing to (%0.6f, %0.6f): %0.2fº True", dest.lat, dest.lon, bearing));
     server.log(format("Position at %sZ: %0.6f, %0.6f", pos.time, pos.lat, pos.lon));
   } else {
     server.log("GPS waiting for fix");
   }
-  
-  // test the motor - turn 180 degrees in 0.5 seconds, stop for 0.5 seconds
   server.log(format("Motor Status: 0x%04X", motor.getStatus()));
-  motor.run(1, STEPS_PER_REV);
-  imp.wakeup(0.5, function() {
-    // soft-stop the motor
-    motor.stop();
-    // Hi-Z the outputs to stop current through the motor
-    motor.softHiZ();
-  });
+  
+  // Point where we want to go
+  if (!motor.isBusy()) {
+    motor.goTo( (STEPS_PER_REV / 360.0) * bearing );
+  }
   
   imp.wakeup(1.0/RATE_HZ, datapoint);
 }
@@ -1168,3 +1318,7 @@ function datapoint() {
 // Go --------------------------------------------------------------------------
 
 datapoint();
+
+// test the motor
+server.log("Attempting to find home position");
+motor.goUntil(1, 20);
