@@ -631,6 +631,7 @@ class L6470 {
 }
 
 // https://cdn.sparkfun.com/assets/parts/1/2/2/8/0/GlobalTop_Titan_X1_Datasheet.pdf
+// https://cdn-shop.adafruit.com/datasheets/PMTK_A11.pdf
 // https://cdn.sparkfun.com/assets/parts/1/2/2/8/0/GTOP_NMEA_over_I2C_Application_Note.pdf
 class MT333X {
 
@@ -1075,9 +1076,10 @@ class MT333X {
     
     function setBaud(baud) {
         if (baud == _uart_baud) return;
-        if ((baud != 9600) && (baud != 57600)) throw format("Unsupported baud (%d); supported rates are 9600 and 57600",baud);
-        if (baud == 57600) _sendCmd(PMTK_SET_BAUD_57600);
-        else _sendCmd(PMTK_SET_BAUD_9600);
+        if (baud == 9600) _sendCmd(PMTK_SET_BAUD_9600);
+        else if (baud == 57600) _sendCmd(PMTK_SET_BAUD_57600);
+        else if (baud == 115200) _sendCmd(PMTK_SET_BAUD_115200);
+        else throw format("Unsupported baud (%d); supported rates are 9600, 57600, 115200",baud);
         _uart_baud = baud;
         _uart.configure(_uart_baud, 8, PARITY_NONE, 1, NO_CTSRTS, _uartCallback.bindenv(this));
     }
@@ -1174,8 +1176,8 @@ class MT333X {
 // Consts and Globals ----------------------------------------------------------
 
 const POS_PERIOD_S = 30; // this should be wildly excessive unless Meb is in orbit
-const STEER_PERIOD_S = 0.2; // attempt to refresh heading at 10 Hz
-const SPICLK_KHZ = 234; // kHz
+const STEER_PERIOD_S = 0.05; // attempt to refresh heading at 20 Hz
+const SPICLK_KHZ = 500; // kHz
 const STEPS_PER_REV = 20; 
 const DECLINATION = 13.5; // degrees, Oakland, CA
 //const DECLINATION = 0;
@@ -1200,11 +1202,13 @@ pos <- {};
 // 2017-10-07 13:03:13 -07:00	[Device]	cannot convert the string (line 671), Pkt: GLGSA,A,1,,,,,,,,,,,,,,,*02
 // 2017-10-07 13:03:13 -07:00	[Device]	the index '0' does not exist (line 633), Pkt: GNRMC,200313.000,V,,,,,1.40,355.73,071017,,,N*52)
 
-imp.enableblinkup(true);
+//imp.enableblinkup(true);
 
 vbat_sns_en <- hardware.pin2;
 vbat_sns <- hardware.pinB;
 vbat_sns.configure(ANALOG_IN);
+
+lid_sw <- hardware.pin1;
 
 i2c <- hardware.i2c89;
 i2c.configure(CLOCK_SPEED_400_KHZ);
@@ -1218,7 +1222,7 @@ spi.configure(CLOCK_IDLE_LOW | MSB_FIRST, SPICLK_KHZ);
 cs_l <- hardware.pinA;
 cs_l.configure(DIGITAL_OUT);
 cs_l.write(1);
-motor_stby <- hardware.pinD;
+motor_stby <- hardware.pinC;
 motor_stby.configure(DIGITAL_OUT);
 motor_stby.write(0);
 
@@ -1230,15 +1234,14 @@ motor <- L6470(spi, cs_l, motor_stby);
 imu.setDatarate_M(1); // 1 Hz - nearest supported rate is 3.125 Hz 
 imu.setModeCont_M(); // enable continuous measurement
 
+gps.wakeup();
 gps.setUpdateRate(1);
 gps.setReportingRate(1);
 
 // 1/64 step microstepping
 motor.setStepMode(STEP_SEL_1_64);
 motor.setMaxSpeed(10 * STEPS_PER_REV); 
-server.log(format("Max speed set to %d steps/s", motor.getMaxSpeed()));
 motor.setFSSpeed(10 * STEPS_PER_REV);
-server.log(format("Full-stepping speed set to %d steps/s", motor.getFSSpeed()));
 motor.setAcc(0x0fff); // max
 motor.setOcTh(500); // mA
 motor.setConfig(CONFIG_INT_OSC | CONFIG_PWMMULT_2_000);
@@ -1258,14 +1261,13 @@ motor.setDecKval(0.11);
 // if we don't even need this, we should keep turning it down. It just wastes power.
 motor.setHoldKval(0.05);
 
-// enable low-speed position optimization
-//motor.setLspdPosOpt(1);
-//server.log("Motor LSPD_OPT Bit: "+motor.getLspdPosOpt());
-
-server.log(format("Status Register: 0x%04x", motor.getStatus()));
-server.log(format("Config Register: 0x%04x", motor.getConfig()));
-
 // Helpers ---------------------------------------------------------------------
+
+function log(msg) {
+  if (server.isconnected()) {
+    server.log(msg);
+  }
+}
 
 function degToRad(deg) {
   return deg * (PI / 180.0);
@@ -1327,17 +1329,30 @@ function getBearingTo(pos, fix) {
   return bearing;
 }
 
+function standby() {
+  if (!lid_sw.read()) {
+    // Lid switch is pressed (or I've pressed and released button 2 in non-form-factor test)
+    log("Entering Standby Mode");
+    // active-low motor controller standby line
+    motor_stby.write(0);
+    gps.standby();
+    lid_sw.configure(DIGITAL_IN_WAKEUP);
+    // sleep for maximum time (28 days minus 2 seconds)
+    imp.onidle(imp.deepsleepfor(2419198));
+  } 
+}
+
 function positionLoop() {
   pos = gps.getPosition();
   if ("lat" in pos && "lon" in pos) {
-    server.log(format("Position at %sZ: %0.6f, %0.6f", pos.time, pos.lat, pos.lon));
+    log(format("Position at %sZ: %0.6f, %0.6f", pos.time, pos.lat, pos.lon));
   } else {
-    server.log("GPS Waiting for fix");
+    log("GPS Waiting for fix");
   }
   
-  server.log(format("Motor Status: 0x%04X", motor.getStatus()));
-  server.log(format("Free Memory: %d bytes", imp.getmemoryfree()));
-  server.log(format("Battery Voltage: %0.2f V", getVbat()));
+  log(format("Motor Status: 0x%04X", motor.getStatus()));
+  log(format("Free Memory: %d bytes", imp.getmemoryfree()));
+  log(format("Battery Voltage: %0.2f V", getVbat()));
   
   imp.wakeup(POS_PERIOD_S, positionLoop);
 }
@@ -1352,11 +1367,11 @@ function steeringLoop() {
   server.log(format("Heading: %0.2fº Mag", heading));
   if ("lat" in pos && "lon" in pos) {
     bearing = getBearingTo(pos, dest);
-    server.log(" ");
-    server.log(format("Bearing to (%0.6f, %0.6f): %0.2fº True", dest.lat, dest.lon, bearing));
+    log(" ");
+    log(format("Bearing to (%0.6f, %0.6f): %0.2fº True", dest.lat, dest.lon, bearing));
   } 
   
-  server.log(format("Steer (ignoring declination and variation): %0.2fº", (bearing - heading)));
+  log(format("Steer (ignoring declination and variation): %0.2fº", (bearing - heading)));
   
   // Point where we want to go
   if (!motor.isBusy()) {
@@ -1368,9 +1383,22 @@ function steeringLoop() {
 
 // Go --------------------------------------------------------------------------
 
+server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, 30);
+server.disconnect();
+
+lid_sw.configure(DIGITAL_IN, standby);
+// Uncomment in form-factor unit.
+// This causes the unit to go back to sleep if left closed until the wake timer runs out.
+//standby();
+
+gps.setBaud(115200);
+
+log(format("Motor Status Register: 0x%04x", motor.getStatus()));
+log(format("Motor Config Register: 0x%04x", motor.getConfig()));
+
 steeringLoop();
 positionLoop();
 
 // Set the home position so we can start steering correctly
-server.log("Attempting to find home position");
+log("Attempting to find home position");
 motor.goUntil(1, 2 * STEPS_PER_REV); // fwd, 2 Revs / Second
