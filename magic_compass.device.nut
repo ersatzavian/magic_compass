@@ -1173,7 +1173,8 @@ class MT333X {
 
 // Consts and Globals ----------------------------------------------------------
 
-const RATE_HZ = 1.0;
+const POS_PERIOD_S = 30; // this should be wildly excessive unless Meb is in orbit
+const STEER_PERIOD_S = 1; // attempt to refresh heading at 10 Hz
 const SPICLK_KHZ = 234; // kHz
 const STEPS_PER_REV = 20; 
 const DECLINATION = 13.5; // degrees, Oakland, CA
@@ -1182,7 +1183,9 @@ const DECLINATION = 13.5; // degrees, Oakland, CA
 dest <- {
   lat = 39.2904,
   lon = -76.6122
-}
+};
+
+pos <- {};
 
 // Setup -----------------------------------------------------------------------
 
@@ -1277,7 +1280,6 @@ function getVbat() {
   vbat_sns_en.configure(DIGITAL_OUT);
   vbat_sns_en.write(1);
   imp.sleep(0.01); // let divider settle
-  server.log(vbat_sns.read());
   // vbat sense divider is 2.2k (top) / 4.7k (bottom)
   local vbat = (vbat_sns.read() / 65535.0) * 4.844;
   // leave the SPI as we found it
@@ -1325,39 +1327,50 @@ function getBearingTo(pos, fix) {
   return bearing;
 }
 
-function datapoint() {
+function positionLoop() {
+  pos = gps.getPosition();
+  if ("lat" in pos && "lon" in pos) {
+    server.log(format("Position at %sZ: %0.6f, %0.6f", pos.time, pos.lat, pos.lon));
+  } else {
+    server.log("GPS Waiting for fix");
+  }
+  
+  server.log(format("Motor Status: 0x%04X", motor.getStatus()));
+  server.log(format("Free Memory: %d bytes", imp.getmemoryfree()));
+  server.log(format("Battery Voltage: %0.2f V", getVbat()));
+  
+  imp.wakeup(POS_PERIOD_S, positionLoop);
+}
+
+function steeringLoop() {
   
   // Now read everything
   local heading = getHdg();
-  server.log(format("Heading: %0.2fº Mag", heading));
-  local pos = gps.getPosition();
+  // default bearing
   local bearing = 180;
+  
+  server.log(format("Heading: %0.2fº Mag", heading));
   if ("lat" in pos && "lon" in pos) {
     bearing = getBearingTo(pos, dest);
     server.log(" ");
-    server.log(format("Position at %sZ: %0.6f, %0.6f", pos.time, pos.lat, pos.lon));
     server.log(format("Bearing to (%0.6f, %0.6f): %0.2fº True", dest.lat, dest.lon, bearing));
-  } else {
-    server.log("GPS waiting for fix");
-  }
+  } 
   
   server.log(format("Steer (ignoring declination and variation): %0.2fº", (bearing - heading)));
+  
   // Point where we want to go
   if (!motor.isBusy()) {
     motor.goTo( (STEPS_PER_REV / 360.0) * (bearing - heading) );
   }
-  server.log(format("Motor Status: 0x%04X", motor.getStatus()));
-  server.log(format("Free Memory: %d bytes", imp.getmemoryfree()));
-  server.log(format("Battery Voltage: %0.2f V", getVbat()));
-
   
-  imp.wakeup(1.0/RATE_HZ, datapoint);
+  imp.wakeup(STEER_PERIOD_S, steeringLoop);
 }
 
 // Go --------------------------------------------------------------------------
 
-datapoint();
+steeringLoop();
+positionLoop();
 
-// test the motor
+// Set the home position so we can start steering correctly
 server.log("Attempting to find home position");
-motor.goUntil(1, 20);
+motor.goUntil(1, 2 * STEPS_PER_REV); // fwd, 2 Revs / Second
