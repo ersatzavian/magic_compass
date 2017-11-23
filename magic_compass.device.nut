@@ -960,12 +960,27 @@ class MT333X {
       }
       local i = 4; // current index in fields
       while (i < (fields.len() - 4)) {
-          local sat = {};
-          sat.id <- fields[i] != "" ? fields[i].tointeger() : null;
-          sat.elevation <- fields[++i] != "" ? fields[i].tofloat() : null;
-          sat.azimuth <- fields[++i] != "" ? fields[i].tofloat() : null;
-          sat.snr <- fields[++i] != "" ? fields[i].tofloat() : null;
-          _last_pos_data.sats.push(sat);
+        local sat = {};
+        sat.id <- fields[i] != "" ? fields[i].tointeger() : null;
+        sat.elevation <- fields[++i] != "" ? fields[i].tofloat() : null;
+        sat.azimuth <- fields[++i] != "" ? fields[i].tofloat() : null;
+        sat.snr <- fields[++i] != "" ? fields[i].tofloat() : null;
+        if (sat.id != null) {
+          local new_sat = true;
+          for (sat_idx = 0; sat_idx < _last_pos_data.sats.len(); sat_idx++) {
+            if (_last_pos_data.sats[sat_idx].id == sat.id) {
+              // we've seen this one before; update the relevant fields
+              new_sat = false;
+              _last_pos_data.sats[sat_idx].elevation = sat.elevation;
+              _last_pos_data.sats[sat_idx].azimuth = sat.azimuth;
+              _last_pos_data.sats[sat_idx].snr = sat.snr;
+            } 
+          }
+          if (new_sat) {
+            // new bird, add to the list
+            _last_pos_data.sats.push(sat);
+          }
+        }
       }
   
       if (_sats_update_cb) _sats_update_cb(_last_pos_data);
@@ -1159,7 +1174,7 @@ class MT333X {
 // Consts and Globals ----------------------------------------------------------
 
 const RATE_HZ = 1.0;
-const SPICLK = 4000; // kHz
+const SPICLK_KHZ = 234; // kHz
 const STEPS_PER_REV = 20; 
 const DECLINATION = 13.5; // degrees, Oakland, CA
 //const DECLINATION = 0;
@@ -1184,6 +1199,10 @@ dest <- {
 
 imp.enableblinkup(true);
 
+vbat_sns_en <- hardware.pin2;
+vbat_sns <- hardware.pinB;
+vbat_sns.configure(ANALOG_IN);
+
 i2c <- hardware.i2c89;
 i2c.configure(CLOCK_SPEED_400_KHZ);
 
@@ -1192,7 +1211,7 @@ uart.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
 // Todo: figure out how to up the baud rate on this thing
 
 spi <- hardware.spi257;
-spi.configure(CLOCK_IDLE_LOW | MSB_FIRST, 234);
+spi.configure(CLOCK_IDLE_LOW | MSB_FIRST, SPICLK_KHZ);
 cs_l <- hardware.pinA;
 cs_l.configure(DIGITAL_OUT);
 cs_l.write(1);
@@ -1253,6 +1272,20 @@ function radToDeg(rad) {
   return rad * (180.0 / PI);
 }
 
+function getVbat() {
+  // this pin is shared with the SPI we use to talk to the motor controller
+  vbat_sns_en.configure(DIGITAL_OUT);
+  vbat_sns_en.write(1);
+  imp.sleep(0.01); // let divider settle
+  server.log(vbat_sns.read());
+  // vbat sense divider is 2.2k (top) / 4.7k (bottom)
+  local vbat = (vbat_sns.read() / 65535.0) * 4.844;
+  // leave the SPI as we found it
+  vbat_sns_en.write(0);
+  spi.configure(CLOCK_IDLE_LOW | MSB_FIRST, SPICLK_KHZ);
+  return vbat;
+}
+
 function getAttitude() {
 
     local accel = imu.getAccel();
@@ -1295,22 +1328,28 @@ function getBearingTo(pos, fix) {
 function datapoint() {
   
   // Now read everything
-  server.log(format("Hdg: %0.2fº Mag", getHdg() + DECLINATION));
+  local heading = getHdg();
+  server.log(format("Heading: %0.2fº Mag", heading));
   local pos = gps.getPosition();
   local bearing = 180;
   if ("lat" in pos && "lon" in pos) {
     bearing = getBearingTo(pos, dest);
-    server.log(format("Bearing to (%0.6f, %0.6f): %0.2fº True", dest.lat, dest.lon, bearing));
+    server.log(" ");
     server.log(format("Position at %sZ: %0.6f, %0.6f", pos.time, pos.lat, pos.lon));
+    server.log(format("Bearing to (%0.6f, %0.6f): %0.2fº True", dest.lat, dest.lon, bearing));
   } else {
     server.log("GPS waiting for fix");
   }
-  server.log(format("Motor Status: 0x%04X", motor.getStatus()));
   
+  server.log(format("Steer (ignoring declination and variation): %0.2fº", (bearing - heading)));
   // Point where we want to go
   if (!motor.isBusy()) {
-    motor.goTo( (STEPS_PER_REV / 360.0) * bearing );
+    motor.goTo( (STEPS_PER_REV / 360.0) * (bearing - heading) );
   }
+  server.log(format("Motor Status: 0x%04X", motor.getStatus()));
+  server.log(format("Free Memory: %d bytes", imp.getmemoryfree()));
+  server.log(format("Battery Voltage: %0.2f V", getVbat()));
+
   
   imp.wakeup(1.0/RATE_HZ, datapoint);
 }
