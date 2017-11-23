@@ -1342,6 +1342,13 @@ function standby() {
   } 
 }
 
+function config_stby() {
+  lid_sw.configure(DIGITAL_IN, standby);
+  // Uncomment in form-factor unit.
+  // This causes the unit to go back to sleep if left closed until the wake timer runs out.
+  //standby();
+}
+
 function positionLoop() {
   pos = gps.getPosition();
   if ("lat" in pos && "lon" in pos) {
@@ -1386,10 +1393,9 @@ function steeringLoop() {
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, 30);
 server.disconnect();
 
-lid_sw.configure(DIGITAL_IN, standby);
-// Uncomment in form-factor unit.
-// This causes the unit to go back to sleep if left closed until the wake timer runs out.
-//standby();
+// long 250 ms debounce on wake
+imp.wakeup(0.25, config_stby);
+
 
 gps.setBaud(115200);
 
