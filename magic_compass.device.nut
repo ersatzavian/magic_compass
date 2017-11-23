@@ -1174,7 +1174,7 @@ class MT333X {
 // Consts and Globals ----------------------------------------------------------
 
 const POS_PERIOD_S = 30; // this should be wildly excessive unless Meb is in orbit
-const STEER_PERIOD_S = 1; // attempt to refresh heading at 10 Hz
+const STEER_PERIOD_S = 0.2; // attempt to refresh heading at 10 Hz
 const SPICLK_KHZ = 234; // kHz
 const STEPS_PER_REV = 20; 
 const DECLINATION = 13.5; // degrees, Oakland, CA
