@@ -1176,16 +1176,101 @@ class MT333X {
 // Consts and Globals ----------------------------------------------------------
 
 const POS_PERIOD_S = 30; // this should be wildly excessive unless Meb is in orbit
-const STEER_PERIOD_S = 0.05; // attempt to refresh heading at 20 Hz
+const STEER_PERIOD_S = 0.1; // attempt to refresh heading at 20 Hz
 const SPICLK_KHZ = 500; // kHz
 const STEPS_PER_REV = 20; 
+const HOME_OFFSET_DEG = 90; // How far past the implied direction of travel mark the "N" end of the needle is at the home position
 const DECLINATION = 13.5; // degrees, Oakland, CA
 //const DECLINATION = 0;
 
-dest <- {
-  lat = 39.2904,
-  lon = -76.6122
-};
+// very precise iphone compass calibration I did before coffee
+cal_table <- {};
+
+// This is disgusting and terrible and if I could just use integers as keys I wouldn't do this.
+cal_table[229] <- 360; 
+cal_table[232] <- 05; 
+cal_table[235] <- 10;
+cal_table[238] <- 15; 
+cal_table[243] <- 20;
+cal_table[245] <- 25; 
+cal_table[249] <- 30; 
+cal_table[252] <- 35; 
+cal_table[256] <- 40; 
+cal_table[260] <- 45; 
+cal_table[265] <- 50;
+cal_table[269] <- 55;
+cal_table[276] <- 60;
+cal_table[280] <- 65;
+cal_table[288] <- 70;
+cal_table[297] <- 75;
+cal_table[306] <- 80;
+cal_table[320] <- 85;
+cal_table[342] <- 90;
+cal_table[22] <- 95;
+cal_table[38] <- 100;
+cal_table[57] <- 105;
+cal_table[73] <- 110;
+cal_table[81] <- 115;
+cal_table[89] <- 120;
+cal_table[96] <- 125;
+cal_table[102] <- 130;
+cal_table[105] <- 135;
+cal_table[110] <- 140;
+cal_table[115] <- 145;
+cal_table[117] <- 150;
+cal_table[121] <- 155;
+cal_table[125] <- 160;
+cal_table[130] <- 165; 
+cal_table[132] <- 170;
+cal_table[136] <- 175;
+cal_table[137] <- 180;
+cal_table[140] <- 185;
+cal_table[143] <- 190;
+cal_table[146] <- 195;
+cal_table[147] <- 195;
+cal_table[151] <- 205;
+cal_table[153] <- 210;
+cal_table[157] <- 215;
+cal_table[159] <- 220;
+cal_table[162] <- 225;
+cal_table[164] <- 230;
+cal_table[167] <- 235;
+cal_table[168] <- 240;
+cal_table[171] <- 245;
+cal_table[174] <- 250;
+cal_table[176] <- 255;
+cal_table[179] <- 260;
+cal_table[181] <- 265;
+cal_table[184] <- 270;
+cal_table[186] <- 275;
+cal_table[188] <- 280;
+cal_table[190] <- 285;
+cal_table[192] <- 290;
+cal_table[195] <- 295;
+cal_table[198] <- 300;
+cal_table[200] <- 305;
+cal_table[203] <- 310;
+cal_table[205] <- 315;
+cal_table[207] <- 320;
+cal_table[210] <- 325;
+cal_table[212] <- 330;
+cal_table[215] <- 335;
+cal_table[218] <- 340;
+cal_table[221] <- 345;
+cal_table[224] <- 350;
+cal_table[226] <- 355;
+
+// E Mt. Vernon and St Paul
+// dest <- {
+//   lat = 39.298,
+//   lon = -76.6144
+// };
+
+// Across the Street from TJ's
+dest <- { 
+  lat = 37.846,
+  lon = -122.2534
+}
 
 pos <- {};
 
@@ -1248,18 +1333,18 @@ motor.setConfig(CONFIG_INT_OSC | CONFIG_PWMMULT_2_000);
 
 // limit applied voltage while running to 1V
 // 1 / 9 = 0.11
-motor.setRunKval(0.11); 
+motor.setRunKval(0.2); 
 
 // motor is rated for ~6V, but driving it hard during accel browns out our crappy power supply
 // seems to start and run just fine at 1V
 // 6 / 9 = 0.67
 // this should prevent us from stalling.
-motor.setAccKval(0.11);
-motor.setDecKval(0.11);
+motor.setAccKval(0.2);
+motor.setDecKval(0.2);
 
 // limit the applied voltage in hold state to 0.5V. (0.5 / 9 = 0.05) 
 // if we don't even need this, we should keep turning it down. It just wastes power.
-motor.setHoldKval(0.05);
+motor.setHoldKval(0.1);
 
 // Helpers ---------------------------------------------------------------------
 
@@ -1308,8 +1393,27 @@ function getHdg() {
   if (hdg < 0) {
       hdg += 360;
   }
-
-  return hdg;
+  
+  // round
+  hdg = hdg.tointeger();
+  
+  // look up the nearest value I bothered to collect and put in the cal table
+  local smallest_difference = 360;
+  local nearest_cal_point = 0;
+  foreach (cal_point, cal_hdg in cal_table) {
+    // figure out how far off our reported heading is from this cal point
+    local difference = math.abs(cal_point - hdg);
+    if ((360 - difference) < difference) {
+      difference = 360 - difference;
+    }
+    // if this is the closest point, save it
+    if (difference < smallest_difference) {
+      smallest_difference = difference;
+      nearest_cal_point = cal_point;
+    }
+  }
+  
+  return cal_table[nearest_cal_point];
 }
 
 function getBearingTo(pos, fix) {
@@ -1364,6 +1468,8 @@ function positionLoop() {
   imp.wakeup(POS_PERIOD_S, positionLoop);
 }
 
+local last_motor_pos = 0;
+local add_rotations = 0;
 function steeringLoop() {
   
   // Now read everything
@@ -1382,7 +1488,26 @@ function steeringLoop() {
   
   // Point where we want to go
   if (!motor.isBusy()) {
-    motor.goTo( (STEPS_PER_REV / 360.0) * (bearing - heading) );
+    //log(format("Pointing to %0.2f steps", (STEPS_PER_REV / 360.0) * (bearing - heading)));
+    local motor_pos = bearing - heading - HOME_OFFSET_DEG;
+    if (motor_pos < 0) {
+      motor_pos += 360;
+    } 
+    // prevent the needle from turning back when rolling over steps per rotation (e.g. go from 18 steps to 1 step)
+    // absolute position count is +/- 2^21 counts, where each microstep in the current step mode is a count
+    // 2^21 = 2,097,152. In 1/64 steps with 20 steps/rotation, that's 1280 counts / rotation -> 1638 rotations.
+    // The count gets cleared every time the compass is closed and the imp sleeps, so this is not likely to become a bug.
+    if ((last_motor_pos > 270) && (motor_pos < 90)) {
+      add_rotations++; 
+    } else if ((last_motor_pos < 90) && (motor_pos > 270)) {
+      add_rotations--;
+    }
+    
+    // mark the last position before you add the rotation counter, or the needle will spin and spin!
+    last_motor_pos = motor_pos;
+    motor_pos += 360 * add_rotations;
+    // log("goto "+STEPS_PER_REV / 360.0 * motor_pos);
+    motor.goTo( (STEPS_PER_REV / 360.0) * motor_pos);
   }
   
   imp.wakeup(STEER_PERIOD_S, steeringLoop);
@@ -1390,21 +1515,26 @@ function steeringLoop() {
 
 // Go --------------------------------------------------------------------------
 
-server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, 30);
-server.disconnect();
+//server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, 30);
+//server.disconnect();
 
 // long 250 ms debounce on wake
 imp.wakeup(0.25, config_stby);
 
-
 gps.setBaud(115200);
+
+// Set the home position so we can start steering correctly
+log("Attempting to find home position");
+motor.run(1, STEPS_PER_REV);
+imp.sleep(1);
+motor.stop();
+motor.goUntil(1, STEPS_PER_REV); // fwd, max speed
 
 log(format("Motor Status Register: 0x%04x", motor.getStatus()));
 log(format("Motor Config Register: 0x%04x", motor.getConfig()));
 
+// now reset motor max speed to make it look nice
+motor.setMaxSpeed(0.1 * STEPS_PER_REV);
+
 steeringLoop();
 positionLoop();
-
-// Set the home position so we can start steering correctly
-log("Attempting to find home position");
-motor.goUntil(1, 2 * STEPS_PER_REV); // fwd, 2 Revs / Second
