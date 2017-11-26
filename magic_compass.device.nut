@@ -268,6 +268,7 @@ class L6470 {
 	
 	// set the maximum motor speed in steps per second
 	// this will generate different angular speed depending on the number of steps per rotation in your motor
+	// Note that resolution is 15.25 steps/s
 	// Input: new max speed in steps per second (integer)
 	// Return: None
 	function setMaxSpeed(stepsPerSec) {
@@ -1325,9 +1326,11 @@ gps.setReportingRate(1);
 
 // 1/64 step microstepping
 motor.setStepMode(STEP_SEL_1_64);
-motor.setMaxSpeed(0.1 * STEPS_PER_REV); 
-motor.setFSSpeed(0.1 * STEPS_PER_REV);
-motor.setAcc(0x0fff); // max
+// set max speed for motor
+// as resolution is 15 steps/s, there's not much point in using this to control the feel of the compass
+motor.setMaxSpeed(STEPS_PER_REV);
+motor.setFSSpeed(STEPS_PER_REV);
+motor.setAcc(0x000f); // max
 motor.setOcTh(500); // mA
 motor.setConfig(CONFIG_INT_OSC | CONFIG_PWMMULT_2_000);
 
@@ -1526,7 +1529,7 @@ gps.setBaud(115200);
 
 // Set the home position so we can start steering correctly
 log("Attempting to find home position");
-motor.goUntil(1, STEPS_PER_REV); // fwd, max speed
+motor.goUntil(1, STEPS_PER_REV); // fwd, max 1 second to home. 
 
 log(format("Motor Status Register: 0x%04x", motor.getStatus()));
 log(format("Motor Config Register: 0x%04x", motor.getConfig()));
