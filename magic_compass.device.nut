@@ -1176,7 +1176,7 @@ class MT333X {
 // Consts and Globals ----------------------------------------------------------
 
 const POS_PERIOD_S = 30; // this should be wildly excessive unless Meb is in orbit
-const STEER_PERIOD_S = 0.1; // attempt to refresh heading at 20 Hz
+const STEER_PERIOD_S = 0.05; // attempt to refresh heading at 20 Hz
 const SPICLK_KHZ = 500; // kHz
 const STEPS_PER_REV = 20; 
 const HOME_OFFSET_DEG = 90; // How far past the implied direction of travel mark the "N" end of the needle is at the home position
@@ -1325,15 +1325,15 @@ gps.setReportingRate(1);
 
 // 1/64 step microstepping
 motor.setStepMode(STEP_SEL_1_64);
-motor.setMaxSpeed(10 * STEPS_PER_REV); 
-motor.setFSSpeed(10 * STEPS_PER_REV);
+motor.setMaxSpeed(0.1 * STEPS_PER_REV); 
+motor.setFSSpeed(0.1 * STEPS_PER_REV);
 motor.setAcc(0x0fff); // max
 motor.setOcTh(500); // mA
 motor.setConfig(CONFIG_INT_OSC | CONFIG_PWMMULT_2_000);
 
 // limit applied voltage while running to 1V
 // 1 / 9 = 0.11
-motor.setRunKval(0.2); 
+motor.setRunKval(0.1); 
 
 // motor is rated for ~6V, but driving it hard during accel browns out our crappy power supply
 // seems to start and run just fine at 1V
@@ -1446,11 +1446,15 @@ function standby() {
   } 
 }
 
-function config_stby() {
+function start_compass() {
   lid_sw.configure(DIGITAL_IN, standby);
   // Uncomment in form-factor unit.
   // This causes the unit to go back to sleep if left closed until the wake timer runs out.
   //standby();
+  
+  // start the steering and position loops.
+  steeringLoop();
+  positionLoop();
 }
 
 function positionLoop() {
@@ -1515,26 +1519,17 @@ function steeringLoop() {
 
 // Go --------------------------------------------------------------------------
 
-//server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, 30);
-//server.disconnect();
-
-// long 250 ms debounce on wake
-imp.wakeup(0.25, config_stby);
+server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, 30);
+server.disconnect();
 
 gps.setBaud(115200);
 
 // Set the home position so we can start steering correctly
 log("Attempting to find home position");
-motor.run(1, STEPS_PER_REV);
-imp.sleep(1);
-motor.stop();
 motor.goUntil(1, STEPS_PER_REV); // fwd, max speed
 
 log(format("Motor Status Register: 0x%04x", motor.getStatus()));
 log(format("Motor Config Register: 0x%04x", motor.getConfig()));
 
-// now reset motor max speed to make it look nice
-motor.setMaxSpeed(0.1 * STEPS_PER_REV);
-
-steeringLoop();
-positionLoop();
+// Configure sleep/wake and start the steering and position loops
+imp.wakeup(0.25, start_compass);
