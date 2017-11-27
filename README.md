@@ -129,16 +129,24 @@ I recommend *not* glueing the sub-top and top pieces into the base of the compas
 
 ### Base 
 
+#### Front
 ![Base Front](/images/encl-front.JPG)
+#### Right
 ![Base Right](/images/encl-right.JPG)
+#### Back
 ![Base Back](/images/encl-back.JPG)
+#### Left
 ![Base Left](/images/encl-left.JPG)
 
 ### Lid
 
+#### Front
 ![Lid Front](/images/lid-front.JPG)
+#### Right
 ![Lid Right](/images/lid-right.JPG)
+#### Back
 ![Lid Back](/images/lid-back.JPG)
+#### Left
 ![Lid Left](/images/lid-left.JPG)
 
 ## Firmware
