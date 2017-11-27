@@ -5,41 +5,41 @@ This project uses an Electric imp, a GPS, a magnetometer, and a small stepper mo
 ## Parts
 
 1. [imp002 EVB](https://electricimp.com/docs/hardware/imp002evb/)
-  * These are not commercially available, but the schematics are attached. 
+    * These are not commercially available, but the schematics are attached. 
 1. You'll need a 9V rail in the box. You can take the route I took (see Modifications section), or just get a 9V boost module like [this one from Pololu](https://www.pololu.com/product/2116).
 1. [L6470 Stepper Motor Driver Breakout](https://www.sparkfun.com/products/retired/10859)
-  * Sparkfun retired these, but I got one on eBay. The IC was flaky and I ordered another from Digikey and replaced it.
+    * Sparkfun retired these, but I got one on eBay. The IC was flaky and I ordered another from Digikey and replaced it.
 1. ["Qwiic GPS" Breakout, aka Titan X1, aka MT3339](https://www.sparkfun.com/products/14414)
-  * Picked this for I2C interface, haven't gotten around to implementing it. Using UART for now. 
+    * Picked this for I2C interface, haven't gotten around to implementing it. Using UART for now. 
 1. Electric Imp 9DOF Tail.
-  * Also not commercially available, but it's just an ST LSM9DS0 breakout.
-    * [Adafruit sells one.](https://www.adafruit.com/product/2021)
-      * Since we're only using the magnetometer, an [LIS3MDL magnetometer](http://www.st.com/content/ccc/resource/technical/document/datasheet/54/2a/85/76/e3/97/42/18/DM00075867.pdf/files/DM00075867.pdf/jcr:content/translations/en.DM00075867.pdf) would likely do just fine with minimal code changes. Finding a breakout is an exercise for the reader, and there's plenty of excuse here already for a custom PCB.
+    * Also not commercially available, but it's just an ST LSM9DS0 breakout.
+        * [Adafruit sells one.](https://www.adafruit.com/product/2021)
+            * Since we're only using the magnetometer, an [LIS3MDL magnetometer](http://www.st.com/content/ccc/resource/technical/document/datasheet/54/2a/85/76/e3/97/42/18/DM00075867.pdf/files/DM00075867.pdf/jcr:content/translations/en.DM00075867.pdf) would likely do just fine with minimal code changes. Finding a breakout is an exercise for the reader, and there's plenty of excuse here already for a custom PCB.
 1. LiPo battery. I'm using a [2Ah one from Sparkfun](https://www.sparkfun.com/products/13855) because I have no subtlety. 
-  * You could definitely make this smaller, probably by an order of magnitude or two. 
+    * You could definitely make this smaller, probably by an order of magnitude or two. 
 1. Tiny cheapo 4-wire stepper motor. 
-  * [I got 10 from Amazon for $10.](https://www.amazon.com/gp/product/B00A9SU77E/ref=oh_aui_detailpage_o00_s00?ie=UTF8&psc=1). That "product" is discontinued but there are hundreds of other similar listings and you can try your luck with any of those without too much risk. 
-    * Changing the motor will change the mounting hardware. I'm pretty sure the output shaft on mine is an M1.7x0.35 thread, and the mounting screws appear to be M1.2x0.25. I bought these parts from some backwater website and we'll see if they ever show up. If they don't I'll glue stuff together. 
+    * [I got 10 from Amazon for $10.](https://www.amazon.com/gp/product/B00A9SU77E/ref=oh_aui_detailpage_o00_s00?ie=UTF8&psc=1). That "product" is discontinued but there are hundreds of other similar listings and you can try your luck with any of those without too much risk. 
+        * Changing the motor will change the mounting hardware. I'm pretty sure the output shaft on mine is an M1.7x0.35 thread, and the mounting screws appear to be M1.2x0.25. I bought these parts from some backwater website and we'll see if they ever show up. If they don't I'll glue stuff together. 
 1. Hall switch. I used an [AH3366Q](https://www.digikey.com/product-detail/en/diodes-incorporated/AH3366Q-P-B/AH3366Q-P-BDI-ND/6575186). A bipolar sensor would have been easier (don't have to get the magnet the right way around).
 1. Tiny magnet to sense needle position with Hall switch - I got a [ridiculous number of 2mm x 1mm magnets on Amazon for $10](https://www.amazon.com/Stainless-Magnets-Refrigerator-Projects-Whiteboard/dp/B072KRP66C/ref=sr_1_1?ie=UTF8&qid=1511743885&sr=8-1&keywords=magnet+1mm). There are lots of options here. 
 1. Limit switch for sensing lid open/closed: [HDP001R from C&K](https://www.digikey.com/product-detail/en/c-k/HDP001R/CKN10548CT-ND/5030194)
 1. Enclosure
-  * Lid and base were cut from a sheet of 1/8" maple with a Glowforge. Used Glowforge proof-grade. 
-  * You can order the parts cut from [Ponoko](https://www.ponoko.com/). 
+    * Lid and base were cut from a sheet of 1/8" maple with a Glowforge. Used Glowforge proof-grade. 
+    * You can order the parts cut from [Ponoko](https://www.ponoko.com/). 
 1. Rear hinges are [Ace Hardware 5299706 3/4" Brass hinges](http://acehardwaremaldives.com/product/hardware/5299706/#.WhuBTbQ-fUI).
 1. Front latch is an [Ace Hardware 5300199 1 5/16" Decorative Catch](http://www.acehardware.com/product/index.jsp?productId=29262156). 
 
 ## Modifications to Parts
 
 1. The L6470 requires 8V or greater to operate. It won't even talk back over SPI if you apply less. 
-  * The imp002 EVB has a boost on it, but it's a 5V boost. Changing the feedback network to greater than 6V will cause the part to fail (tried this).
-  * I removed the imp002 EVB boost (a TPS61070), and replaced it with a [TPS61040 LED boost controller](https://www.digikey.com/product-detail/en/texas-instruments/TPS61040QDBVRQ1/296-23425-1-ND/1851362). 
-    * This required the Feedback and enable traces coming into the footprint to be cut and swapped on the footprint. 
-    * An external schottky diode must also be installed from pin 1 to the output. 
+    * The imp002 EVB has a boost on it, but it's a 5V boost. Changing the feedback network to greater than 6V will cause the part to fail (tried this).
+    * I removed the imp002 EVB boost (a TPS61070), and replaced it with a [TPS61040 LED boost controller](https://www.digikey.com/product-detail/en/texas-instruments/TPS61040QDBVRQ1/296-23425-1-ND/1851362). 
+        * This required the Feedback and enable traces coming into the footprint to be cut and swapped on the footprint. 
+        * An external schottky diode must also be installed from pin 1 to the output. 
 1. I disabled powersave mode on the TPS63031 buck/boost on the imp002 EVB. This feature causes the supply to stop switching when load is under ~100mA and bus voltage is within a few hundred millivolts of 3.3V, which is basically normal operation for this device all the time. This causes absurd ripple on the 3.3V rail, which makes the output cap sing like a canary even when the device is asleep, which is unacceptable. 
-  * Cut the trace going into Pin 7 of the TPS63031 (U12), and short pins 6 and 7 together on the TPS63031. 
+    * Cut the trace going into Pin 7 of the TPS63031 (U12), and short pins 6 and 7 together on the TPS63031. 
 1. You probably want to disconnect Button 1 from Pin1 on the imp002 EVB; it's got a 100kΩ pulldown on it and might mess with the operation of the wake switch. I didn't risk it; I pulled D50 off the board. 
-  * After doing this, a 4.7kΩ pullup from imp Pin1 to 3V3 is required. The limit switch holds the line low when the lid is shut, letting the imp sleep. 
+    * After doing this, a 4.7kΩ pullup from imp Pin1 to 3V3 is required. The limit switch holds the line low when the lid is shut, letting the imp sleep. 
 
 ## Integration
 
@@ -156,11 +156,11 @@ The firmware currently uses the LSM9DS0 library from Electric Imp. Imp has libra
 ## Known Issues / Future Improvements
 
 1. The compass becomes unresponsive to sleep/wake events, and sometimes also fails to move the stepper motor, when the GPS acquires lock.
-  * This may be due to a storm of UART callback events when the GPS determines its position. Switching the GPS to I2C would solve this without sorting out a bunch of additional commands for the MT3339. This would also eliminate the UART wiring by putting the GPS and Magnetometer on the same I2C bus.
+    * This may be due to a storm of UART callback events when the GPS determines its position. Switching the GPS to I2C would solve this without sorting out a bunch of additional commands for the MT3339. This would also eliminate the UART wiring by putting the GPS and Magnetometer on the same I2C bus.
 1. Hacked-together power supply has very high output impedance and low current limit.
-  * Increasing the motor K values very much causes undervoltage lockout conditions sometimes when the motor is commanded to move. Using a proper boost would resolve this. 
-  * I did order a few [Pololu 9V step-up modules](https://www.pololu.com/product/2116) with the intent of using one, but my hackjob power supply is holding up well enough I haven't done this yet. 
+    * Increasing the motor K values very much causes undervoltage lockout conditions sometimes when the motor is commanded to move. Using a proper boost would resolve this. 
+    * I did order a few [Pololu 9V step-up modules](https://www.pololu.com/product/2116) with the intent of using one, but my hackjob power supply is holding up well enough I haven't done this yet. 
 1. Enclosure SVGs do not currently include laser kerf correction, which can easily be applied in Makercase. The enclosure prints and assembles nicely, but requires glue to stay together.
-  * A 0.002" (0.0508 mm) kerf correction should produce a holds-itself-together press fit. 
-  * A 0.0025" (0.0635 mm) kerf correction should produce a hard-to-press-together-and-maybe-doesn't-need-glue fit. 
+    * A 0.002" (0.0508 mm) kerf correction should produce a holds-itself-together press fit. 
+    * A 0.0025" (0.0635 mm) kerf correction should produce a hard-to-press-together-and-maybe-doesn't-need-glue fit. 
 1. The 4.7kΩ pullup on Pin1 grounded through the limit switch wastes almost 1mA when the imp is asleep; the imp sleeps at < 10µA, so this is pretty eggregious. With a 2 Ah battery, this is still ~90 days of sleep standby time, so whatever, but if I make a custom board I'll fix the wake logic so it actually saves power. 
