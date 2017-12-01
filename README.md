@@ -2,6 +2,13 @@
 
 This project uses an Electric imp, a GPS, a magnetometer, and a small stepper motor to show the course from its current position to a pre-programmed set of coordinates.
 
+## Issues
+1. On/Off Switch and Micro-USB connector hole placement on left side are not quite right.
+    * Micro-USB hole is slightly too high, which can lead to the micro-USB cable prying the connector off the board. This is very sensitive to how many layers of foam tape are used. Spinning a PCB and hard-mounting it to the bottom of the enclosure would be great. 
+    * On-off switch hole is too far away horizontally from micro-USB cable hole. 
+1. Clearance holes for motor shaft in top piece and sub-top piece are slightly too small. Had to drill these out to 1/8" and then remove some more material from the top piece with an x-acto. If it rubs on the motor shaft at all, it'll stall. 
+1. Limit switch sits slightly sub-flush from case edge, so some hackery is needed to actually press it. Since the hole for the limit switch is less than 1/8" wide, simply adding a square of plywood to the inside edge of the lid doesn't work. Instead, I had to add the 1/8" plywood to the inside of the lid so it was flush with the bottom edge of the case, then add a dab of hot glue, then whittle it down into a little plunger to trip the limit switch. This worked pretty well. 
+
 ## Parts
 
 1. [imp002 EVB](https://electricimp.com/docs/hardware/imp002evb/)
