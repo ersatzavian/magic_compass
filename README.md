@@ -160,7 +160,7 @@ I recommend *not* glueing the sub-top and top pieces into the base of the compas
 
 The firmware currently uses the LSM9DS0 library from Electric Imp. Imp has libraries for the L6470 and for the MT333X family of GPS parts, but too many modifications were needed to use these right out of the box. I will upstream my changes and hope to switch the the "requireable" versions of these libraries later. For now, just copy/paste into the IDE.
 
-## Known Issues / Future Improvements
+## Future Improvements
 
 1. The compass becomes unresponsive to sleep/wake events, and sometimes also fails to move the stepper motor, when the GPS acquires lock.
     * This may be due to a storm of UART callback events when the GPS determines its position. Switching the GPS to I2C would solve this without sorting out a bunch of additional commands for the MT3339. This would also eliminate the UART wiring by putting the GPS and Magnetometer on the same I2C bus.
